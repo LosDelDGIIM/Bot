@@ -1248,7 +1248,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         "- /fincapturas - Finalizar la subida de capturas\n"
         "- /noenlace - Indicar que no se proporcionará un enlace\n"
         "- /desconocido - Indicar que no se conoce la información solicitada\n"
-        "- /today - Fecha actual\n\n"
+        "- /today - Fecha actual\n"
         "- /cursoActual - Curso académico actual\n\n"
         "Para colaborar, tan solo tienes que seguir las instrucciones del bot.\n"
         "En el caso de detectar cualquier anomalía o bug, por favor, contacta con nosotros tal y como se indica en LosDelDGIIM.github.io/colaboracion.html.\n\n"
