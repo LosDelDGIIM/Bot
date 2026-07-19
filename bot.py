@@ -1704,6 +1704,11 @@ async def recuperar_metadatos_handler(update: Update, context: ContextTypes.DEFA
 
                 # Si el usuario ha rellenado el campo
                 if valor:
+                    # Si el valor no termina con un ., lo añadimos
+                    if valor[-1] != '.':
+                        valor += '.'
+
+
                     # Buscamos el item identificado por clave y lo rellenamos con valor
                     patron = re.compile(r'%\s*\\item\[' + re.escape(clave) + r'\].*')
 
