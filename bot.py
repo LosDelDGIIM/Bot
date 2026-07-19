@@ -1665,7 +1665,8 @@ async def procesar_examen_handler(update: Update, context: ContextTypes.DEFAULT_
             mensaje_instrucciones = (
                 "¡Examen procesado por la IA!\n\n"
                 "Sin embargo, no he podido leer algunos datos del encabezado. "
-                "Haz clic en el botón de abajo para <b>escribir la plantilla automáticamente</b> en tu chat."
+                "Haz clic en el botón de abajo para <b>escribir la plantilla automáticamente</b> en tu chat.\n"
+                "Si el botón no funciona, cópialo y pégalo manualmente."
             )
 
             await update.message.reply_text(
