@@ -521,7 +521,7 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         actualizar_plantillas_desde_github()
 
         await query.message.reply_text(
-            "Sube una foto clara del examen que quieres pasar a código LaTeX.\n"
+            "Sube el examen que quieres pasar a código LaTeX.\n\n"
             "Recomendamos el uso de esta herramienta fuera del horario 14:00-22:00 ya que los servidores sufren mayor demanda en dichas horas.")
         return ESCANEO
     #######################################
@@ -1489,26 +1489,43 @@ Función que acumula las imágenes que le manda el usuario al bot para hacer una
 Acumula los nombres de todas en la variable 'FOTOS_IA' de context.user_data y las descarga en el directorio de usuario
 """
 async def acumular_fotos_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    if update.message.photo:
-        file = await context.bot.get_file(update.message.photo[-1].file_id)
+    msg = update.message
+    
+    # Check if the message is a photo, or a document that is an image or PDF
+    is_photo = bool(msg.photo)
+    is_doc_image = bool(msg.document and msg.document.mime_type and msg.document.mime_type.startswith('image/'))
+    is_pdf = bool(msg.document and msg.document.mime_type == 'application/pdf')
+
+    if is_photo or is_doc_image or is_pdf:
+        # Obtain the corresponding file object
+        if is_photo:
+            file = await context.bot.get_file(msg.photo[-1].file_id)
+            extension = ".jpg"
+        else:  # Document (image or PDF)
+            file = await context.bot.get_file(msg.document.file_id)
+            # Preserve original extension or default to .pdf / .jpg
+            if is_pdf:
+                extension = ".pdf"
+            else:
+                extension = os.path.splitext(msg.document.file_name)[1] or ".jpg"
 
         directorio_usuario = context.user_data.get(DOWNLOADS_DIR_KEY, DOWNLOAD_BASEDIR)
 
         if 'FOTOS_IA' not in context.user_data:
             context.user_data['FOTOS_IA'] = []
         
-        # Le damos un nombre único a cada foto basándonos en cuántas hay ya guardadas
         numero_foto = len(context.user_data.get('FOTOS_IA', [])) + 1
-        file_name = f"temp_examen_{numero_foto}.jpg"
+        file_name = f"temp_examen_{numero_foto}{extension}"
         file_path = os.path.join(directorio_usuario, file_name)
+        
         await file.download_to_drive(file_path)
         
-        # Guardamos la ruta en la lista
         context.user_data['FOTOS_IA'].append(file_name)
         
-        await update.message.reply_text(f"Página {numero_foto} guardada. Sube la siguiente o escribe /finarchivos.")
+        await msg.reply_text(f"Foto/Archivo {numero_foto} guardado. Sube el siguiente o escribe /finarchivos.")
     else:
-        await update.message.reply_text("Solo se aceptan imágenes del examen, por lo que este mensaje ha sido ignorado. Por favor manda una imagen.")
+        await msg.reply_text("Formato no válido. Por favor envía una foto, una imagen como documento o un archivo PDF del examen.")
+        
     return ESCANEO
 
 """
@@ -1559,7 +1576,7 @@ async def procesar_examen_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text("No has subido ninguna foto. Sube alguna o escribe /cancel.")
         return ESCANEO
 
-    await update.message.reply_text(f"Procesando {len(fotos)} páginas con la IA y aplicando la plantilla... Esto tardará un poco.")
+    await update.message.reply_text(f"Procesando {len(fotos)} fotos/archivos con la IA y aplicando la plantilla... Esto tardará un poco.")
 
     
     # 1. Plantilla y preámbulo obtenidos del repo
@@ -1569,8 +1586,18 @@ async def procesar_examen_handler(update: Update, context: ContextTypes.DEFAULT_
     contenidos = []
     for foto in fotos:
         ruta_completa = os.path.join(directorio_usuario,foto)
+
+        # Detectamos el tipo MIME real según la extensión (.pdf, .png, .jpg, etc.)
+        mime_type, _ = mimetypes.guess_type(ruta_completa)
+        # Si por alguna razón no detecta el tipo, asignamos un fallback por defecto
+        if not mime_type:
+            if foto.lower().endswith('.pdf'):
+                mime_type = 'application/pdf'
+            else:
+                mime_type = 'image/jpeg'
+
         with open(ruta_completa, "rb") as f:
-            contenidos.append(types.Part.from_bytes(data=f.read(), mime_type='image/jpeg'))
+            contenidos.append(types.Part.from_bytes(data=f.read(), mime_type=mime_type))
             
     # Añadimos la orden de texto al final de las fotos
     # Con esto terminamos el prompt normal, el que se le escribe
@@ -1664,9 +1691,10 @@ async def procesar_examen_handler(update: Update, context: ContextTypes.DEFAULT_
 
             mensaje_instrucciones = (
                 "¡Examen procesado por la IA!\n\n"
-                "Sin embargo, no he podido leer algunos datos del encabezado. "
-                "Haz clic en el botón de abajo para <b>escribir la plantilla automáticamente</b> en tu chat.\n"
-                "Si el botón no funciona, cópialo y pégalo manualmente."
+                "Sin embargo, no he podido leer algunos datos del encabezado, y necesito que los indiques.\n"
+                "\t- Haz clic en el botón de abajo para <b>escribir la plantilla automáticamente</b> en tu chat.\n"
+                "\t- Si el botón no funciona, cópialo y pégalo manualmente.\n\n"
+                "Si no deseas añadirlo, escribe /omitir."
             )
 
             await update.message.reply_text(
