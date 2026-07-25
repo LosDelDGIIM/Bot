@@ -55,6 +55,7 @@ PROMPT = "prompt_ocr.txt"
 
 LOG_PATH = os.path.join(DOWNLOAD_BASEDIR, "log_file.log")
 CHAT_IDS_PATH = os.path.join(DOWNLOAD_BASEDIR, "chat_ids.log")
+PERSONAL_CHAT_ID_FILE = "chat_id.txt"       # File inside each folder that saves the ChatID of the user
 
 # Rutas para los archivos que requiere la transcripción con IA
 PREAMBULO_PATH = os.path.join(PLANTILLAS_BASEDIR,PREAMBULO)
@@ -437,6 +438,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     file_name = context.user_data[INIT_TIME_KEY] + "_" + get_userIdentifier(context.user_data)
     context.user_data[DOWNLOADS_DIR_KEY] = os.path.join(DOWNLOAD_BASEDIR, file_name)
     os.makedirs(context.user_data[DOWNLOADS_DIR_KEY])
+
+    with open(os.path.join(context.user_data[DOWNLOADS_DIR_KEY], PERSONAL_CHAT_ID_FILE), "w") as f:
+        f.write(str(update.message.chat_id))
 
     # Mensaje de bienvenida
     await update.message.reply_text(
@@ -1256,7 +1260,58 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         "¡Gracias por colaborar con este proyecto!"
     )
     register_chat_id(CHAT_IDS_PATH, update.message.chat_id)
-    await update.message.reply_text(help_text)
+    await update.message.reply_text(help_text, parse_mode='HTML')
+
+
+
+async def comprobar_peticiones_abandonadas(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Revisa las carpetas en DOWNLOAD_BASEDIR y notifica si llevan 24h abandonadas."""
+    ahora = datetime.now()
+    limite_tiempo = timedelta(days=1)  # 24 horas
+
+    if not os.path.exists(DOWNLOAD_BASEDIR):
+        return
+
+    for item in os.listdir(DOWNLOAD_BASEDIR):
+        ruta_carpeta = os.path.join(DOWNLOAD_BASEDIR, item)
+
+        # Filtramos solo directorios que coincidan con la estructura de fecha: YYYY-MM-DD_HH:MM:SS_*
+        if os.path.isdir(ruta_carpeta) and "_" in item:
+            partes = item.split("_", 2)
+            if len(partes) >= 2:
+                fecha_str = f"{partes[0]}_{partes[1]}"
+                try:
+                    fecha_creacion = datetime.strptime(fecha_str, "%Y-%m-%d_%H:%M:%S")
+                except ValueError:
+                    continue  # Si la carpeta no sigue el formato de fecha, la ignoramos
+
+                # Si ha pasado más de 1 día
+                if ahora - fecha_creacion > limite_tiempo:
+                    archivo_chat_id = os.path.join(ruta_carpeta, PERSONAL_CHAT_ID_FILE)
+                    
+                    if os.path.exists(archivo_chat_id):
+                        with open(archivo_chat_id, "r", encoding="utf-8") as f:
+                            chat_id = int(f.read().strip())
+
+                        # Enviamos el recordatorio al usuario
+                        mensaje_aviso = (
+                            "👋 <b>Hola, vemos que iniciaste una colaboración hace más de un día pero no la terminaste.</b>\n\n"
+                            "¿Ha surgido algún problema o necesitas ayuda?\n\n"
+                            "📌 <b>Si has tenido algún problema o duda:</b>\n"
+                            "• Puedes consultar el comando /help para ver las instrucciones y comandos disponibles.\n"
+                            "• Visita nuestra web de colaboración: https://LosDelDGIIM.github.io/colaboracion.html\n"
+                            "• Si has experimentado un error o fallo técnico, por favor, comunícanoslo (por correo a losdeldgiim@gmail.com).\n\n"
+                            "🔄 <b>Para reiniciar o cambiar de opción:</b>\n"
+                            "• Escribe /cancel para cancelar la sesión actual.\n"
+                            "• Si deseas iniciar una nueva solicitud, escribe /start."
+                        )
+                        await context.bot.send_message(chat_id=chat_id, text=mensaje_aviso, parse_mode='HTML')
+                        add_log(LOG_PATH, f"Recordatorio de 24h enviado a {chat_id} para la carpeta {item}")
+
+
+
+                        # Eliminamos el archivo chat_id.txt para no volver a notificarle en la siguiente revisión
+                        os.remove(archivo_chat_id)
 
 
 """
@@ -2040,6 +2095,13 @@ No devuelve nada, tan solo inicia el bot.
 """
 def main() -> None:
     application = Application.builder().token(TOKEN).build()
+
+    if application.job_queue:
+        application.job_queue.run_repeating(
+            comprobar_peticiones_abandonadas, 
+            interval=3*60*60,  # Cada 3 horas
+            first=10 # Primera revisión a los 10s de arrancar
+        )
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
