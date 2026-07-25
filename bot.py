@@ -11,6 +11,7 @@ import httpx
 import traceback
 import asyncio
 import json
+import shutil
 
 # Para trabajar con .env
 from dotenv import load_dotenv
@@ -1171,6 +1172,12 @@ async def terminar_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     
     # Finalizar la conversación
     return await procesar_peticion_y_terminar(update, context)
+
+
+def eliminarCarpeta(directorio):
+    """Elimina la carpeta y todo su contenido."""
+    if directorio and os.path.exists(directorio):
+        shutil.rmtree(directorio)
         
 
 """
@@ -1199,7 +1206,7 @@ async def procesar_peticion_y_terminar(update: Update, context: ContextTypes.DEF
         )
             
         add_log(LOG_PATH, f"Petición finalizada correctamente por {get_userIdentifier(context.user_data)}.")
-        os.system(f"rm -rf {context.user_data.get(DOWNLOADS_DIR_KEY)}")
+        eliminarCarpeta(context.user_data.get(DOWNLOADS_DIR_KEY))
 
     else:
         add_log(LOG_PATH, f"Error al gestionar la petición de {get_userIdentifier(context.user_data)}.")
@@ -1229,7 +1236,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     add_log(LOG_PATH, f"Petición cancelada por {get_userIdentifier(context.user_data)}.")
 
     # Elimina la carpeta creada y todo lo que haya dentro
-    os.system(f"rm -rf {context.user_data.get(DOWNLOADS_DIR_KEY)}")
+    eliminarCarpeta(context.user_data.get(DOWNLOADS_DIR_KEY))
 
     # Limpiar los datos de la conversación
     context.user_data.clear()
