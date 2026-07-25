@@ -2167,7 +2167,8 @@ def main() -> None:
             CommandHandler('cancel', cancel),
             MessageHandler(filters.ALL, unknown_handler),
             CallbackQueryHandler(unknown_handler)          # <-- Para callbacks inesperados
-        ]
+        ],
+        per_message=False
     )
 
 
@@ -2183,7 +2184,8 @@ def main() -> None:
             CommandHandler('cancel', cancel),
             MessageHandler(filters.ALL, unknown_handler),
             CallbackQueryHandler(unknown_handler)          # <-- Para callbacks inesperados
-        ]
+        ],
+        per_message=False
     )
 
 
@@ -2197,7 +2199,8 @@ def main() -> None:
             CommandHandler('cancel', cancel),
             MessageHandler(filters.ALL, unknown_handler),
             CallbackQueryHandler(unknown_handler)          # <-- Para callbacks inesperados
-        ]
+        ],
+        per_message=False
     )
 
     # Añadimos el handler a la aplicación
