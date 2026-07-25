@@ -451,11 +451,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "¿En qué te gustaría colaborar?",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("Añadir nuevo material", callback_data=CALLBACK_NUEVO)],
+            [InlineKeyboardButton("Escanear examen a LaTeX (IA)", callback_data=CALLBACK_ESCANEO)],
             [InlineKeyboardButton("Complementar el material existente", callback_data=CALLBACK_COMPLEMENTAR)],
             [InlineKeyboardButton("Corrección de erratas", callback_data=CALLBACK_CORREGIR)],
-            [InlineKeyboardButton("Examen", callback_data=CALLBACK_EXAMEN)],
             [InlineKeyboardButton("Colaborar pasando a digital", callback_data=CALLBACK_COLABORAR)],
-            [InlineKeyboardButton("Escanear examen a LaTeX (IA)", callback_data=CALLBACK_ESCANEO)],
+            [InlineKeyboardButton("Subir Examen Manualmente", callback_data=CALLBACK_EXAMEN)],
             [InlineKeyboardButton("Otro", callback_data=CALLBACK_OTRO)]
         ])
     )
@@ -498,12 +498,14 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     
     elif context.user_data[OPTION_KEY] == CALLBACK_EXAMEN:
         await query.message.reply_text(
-            "Has elegido colaborar con un examen, ¡gracias!\n"
-            "-\tEn el caso de exámenes pasados a digital, escribir /cancel para volver a inicar, y elegir *añadir nuevo material*.\n"
-            "-\tEn el caso de exámenes que no se hayan pasado a digital, sí es aquí.\n"
-            "Por favor, proporciona toda la información que puedas, para que podamos añadirlo a la web.\n"
-            f"Si no sabes alguna información, puedes responder con {UNKNOWN_COMMAND}.\n"
-            "Además, te animamos a pasarlo a digital si tienes la oportunidad, ¡nos ayudarías mucho!"
+            "Has elegido colaborar subiendo un examen de forma manual, ¡gracias!\n\n"
+            "💡 <b>Recomendación:</b> Si tienes las fotos del examen y quieres que la IA lo transcriba automáticamente a LaTeX por ti, te recomendamos volver al menú con /cancel y seleccionar la opción <b>'Escanear examen a LaTeX (IA)'</b>.\n\n"
+            "Si prefieres continuar manualmente:\n"
+            "• En el caso de exámenes pasados a digital, escribe /cancel y elige 'Añadir nuevo material'.\n"
+            "• Si son fotos o PDF sin pasar a digital, ¡continúa por aquí!\n\n"
+            "Por favor, proporciona toda la información que puedas. "
+            f"Si no sabes algún dato, puedes responder con {UNKNOWN_COMMAND}.",
+            parse_mode="HTML"
         )
     
     elif context.user_data[OPTION_KEY] == CALLBACK_OTRO:
@@ -526,8 +528,13 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         actualizar_plantillas_desde_github()
 
         await query.message.reply_text(
-            "Sube el examen que quieres pasar a código LaTeX.\n\n"
-            "Recomendamos el uso de esta herramienta fuera del horario 14:00-22:00 ya que los servidores sufren mayor demanda en dichas horas.")
+            "Has elegido escanear un examen con IA, ¡muchas gracias por colaborar!\n\n"
+            "<b>Por favor, envía las imágenes o archivos del examen</b> (fotos, documentos o PDF).\n"
+            "Puedes subir varias páginas de una en una y, cuando termines, envía el comando /finarchivos.\n\n"
+            "<i>Sugerencia:</i> Los servidores de la IA suelen estar más saturados entre las 14:00 y las 22:00. "
+            "Si experimentas lentitud o reintentos, te recomendamos usar la herramienta fuera de esa franja horaria.",
+            parse_mode="HTML"
+        )
         return ESCANEO
     #######################################
 
