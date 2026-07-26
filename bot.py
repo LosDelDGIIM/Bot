@@ -68,6 +68,9 @@ PROMPT_PATH = os.path.join(DOWNLOAD_BASEDIR, PROMPT)
 DEFAULT_NOTIFY = True
 SEPARATOR = ";"
 
+# Valor por defecto de numero de notificaciones de peticion olvidada
+MAX_AVISOS_PETICION_ABANDONADA = 1
+
 # Constantes para los callback data del menú principal
 CALLBACK_NUEVO = 'Nuevo material'
 CALLBACK_COMPLEMENTAR = 'Complementar material existente'
@@ -441,7 +444,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     os.makedirs(context.user_data[DOWNLOADS_DIR_KEY])
 
     with open(os.path.join(context.user_data[DOWNLOADS_DIR_KEY], PERSONAL_CHAT_ID_FILE), "w") as f:
-        f.write(str(update.message.chat_id))
+        f.write(str(update.message.chat_id) + SEPARATOR + "0")  # Guardamos el chat_id y el contador de avisos (inicialmente 0)
 
     # Mensaje de bienvenida
     await update.message.reply_text(
@@ -1278,6 +1281,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 
+
 async def comprobar_peticiones_abandonadas(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Revisa las carpetas en DOWNLOAD_BASEDIR y notifica si llevan 24h abandonadas."""
     ahora = datetime.now()
@@ -1305,27 +1309,39 @@ async def comprobar_peticiones_abandonadas(context: ContextTypes.DEFAULT_TYPE) -
                     
                     if os.path.exists(archivo_chat_id):
                         with open(archivo_chat_id, "r", encoding="utf-8") as f:
-                            chat_id = int(f.read().strip())
+                            contenido = f.read().strip()
 
-                        # Enviamos el recordatorio al usuario
-                        mensaje_aviso = (
-                            "👋 <b>Hola, vemos que iniciaste una colaboración hace más de un día pero no la terminaste.</b>\n\n"
-                            "¿Ha surgido algún problema o necesitas ayuda?\n\n"
-                            "📌 <b>Si has tenido algún problema o duda:</b>\n"
-                            "• Puedes consultar el comando /help para ver las instrucciones y comandos disponibles.\n"
-                            "• Visita nuestra web de colaboración: https://LosDelDGIIM.github.io/colaboracion.html\n"
-                            "• Si has experimentado un error o fallo técnico, por favor, comunícanoslo (por correo a losdeldgiim@gmail.com).\n\n"
-                            "🔄 <b>Para reiniciar o cambiar de opción:</b>\n"
-                            "• Escribe /cancel para cancelar la sesión actual.\n"
-                            "• Si deseas iniciar una nueva solicitud, escribe /start."
-                        )
-                        await context.bot.send_message(chat_id=chat_id, text=mensaje_aviso, parse_mode='HTML')
-                        add_log(LOG_PATH, f"Recordatorio de 24h enviado a {chat_id} para la carpeta {item}")
+                        # Leemos el chat_id y el contador de avisos (si no existe contador, añadimos 0)
+                        if SEPARATOR in contenido:
+                            chat_id_str, avisos_str = contenido.split(SEPARATOR, 1)
+                            chat_id = int(chat_id_str)
+                            num_avisos = int(avisos_str)
+                        else:
+                            chat_id = int(contenido)
+                            num_avisos = 0
 
+                        # Si aún no hemos alcanzado el límite de avisos
+                        if num_avisos < MAX_AVISOS_PETICION_ABANDONADA:
+                            # Enviamos el recordatorio al usuario
+                            mensaje_aviso = (
+                                "👋 <b>Hola, vemos que iniciaste una colaboración hace más de un día pero no la terminaste.</b>\n\n"
+                                "¿Ha surgido algún problema o necesitas ayuda?\n\n"
+                                "📌 <b>Si has tenido algún problema o duda:</b>\n"
+                                "• Puedes consultar el comando /help para ver las instrucciones y comandos disponibles.\n"
+                                "• Visita nuestra web de colaboración: https://LosDelDGIIM.github.io/colaboracion.html\n"
+                                "• Si has experimentado un error o fallo técnico, por favor, comunícanoslo (por correo a losdeldgiim@gmail.com).\n\n"
+                                "🔄 <b>Para reiniciar o cambiar de opción:</b>\n"
+                                "• Escribe /cancel para cancelar la sesión actual.\n"
+                                "• Si deseas iniciar una nueva solicitud, escribe /start."
+                            )
+                            await context.bot.send_message(chat_id=chat_id, text=mensaje_aviso, parse_mode='HTML')
+                            
+                            num_avisos += 1
+                            add_log(LOG_PATH, f"Recordatorio ({num_avisos}/{MAX_AVISOS_PETICION_ABANDONADA}) enviado a {chat_id} para la carpeta {item}")
 
-
-                        # Eliminamos el archivo chat_id.txt para no volver a notificarle en la siguiente revisión
-                        os.remove(archivo_chat_id)
+                            # Si hemos alcanzado el límite, eliminamos el archivo para no volver a notificar
+                            with open(archivo_chat_id, "w", encoding="utf-8") as f:
+                                f.write(f"{chat_id}{SEPARATOR}{num_avisos}")
 
 
 """
