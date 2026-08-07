@@ -1334,14 +1334,19 @@ async def comprobar_peticiones_abandonadas(context: ContextTypes.DEFAULT_TYPE) -
                                 "• Escribe /cancel para cancelar la sesión actual.\n"
                                 "• Si deseas iniciar una nueva solicitud, escribe /start."
                             )
-                            await context.bot.send_message(chat_id=chat_id, text=mensaje_aviso, parse_mode='HTML')
-                            
-                            num_avisos += 1
-                            add_log(LOG_PATH, f"Recordatorio ({num_avisos}/{MAX_AVISOS_PETICION_ABANDONADA}) enviado a {chat_id} para la carpeta {item}")
 
-                            # Si hemos alcanzado el límite, eliminamos el archivo para no volver a notificar
-                            with open(archivo_chat_id, "w", encoding="utf-8") as f:
-                                f.write(f"{chat_id}{SEPARATOR}{num_avisos}")
+                            try:
+                                await context.bot.send_message(chat_id=chat_id, text=mensaje_aviso, parse_mode='HTML')
+                            
+                                num_avisos += 1
+                                add_log(LOG_PATH, f"Recordatorio ({num_avisos}/{MAX_AVISOS_PETICION_ABANDONADA}) enviado a {chat_id} para la carpeta {item}")
+
+                                with open(archivo_chat_id, "w", encoding="utf-8") as f:
+                                    f.write(f"{chat_id}{SEPARATOR}{num_avisos}")
+
+                            except Forbidden:
+                                add_log(LOG_PATH, f"El usuario {chat_id} ha bloqueado al bot o no permite mensajes directos. No se puede enviar recordatorio.")
+                                eliminarCarpeta(ruta_carpeta)
 
 
 """
