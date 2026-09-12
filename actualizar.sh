@@ -3,7 +3,7 @@ set -e
 
 # Configuración del servidor y rutas
 SERVER_USER="arturoolvrs"
-SERVER_HOST="miserver"   # Alias de /etc/hosts o IP directa
+SERVER_HOST="arturoolvrsserver"   # Alias de /etc/hosts o IP directa
 REMOTE_TARGET="${SERVER_USER}@${SERVER_HOST}"
 REMOTE_DIR="~/Bot"
 LOCAL_CHAT_LOG="chat_ids.log"
