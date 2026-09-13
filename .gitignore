@@ -220,4 +220,5 @@ __marimo__/
 
 # PERSONAL
 token.json
-connect_server.sh
+credentials.json
+

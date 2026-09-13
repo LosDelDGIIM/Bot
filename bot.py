@@ -64,6 +64,10 @@ PLANTILLA_PATH = os.path.join(PLANTILLAS_BASEDIR,PLANTILLA_EXAMEN)
 # Aquí poner en vez de download basedir, donde sea que se quiera poner el txt del prompt
 PROMPT_PATH = os.path.join(DOWNLOAD_BASEDIR, PROMPT)
 
+# Valores necesarios para enviar correos
+TOKEN_EMAIL_PATH = os.getenv("TOKEN_EMAIL_PATH")
+CREDENTIALS_PATH = os.getenv("CREDENTIALS_PATH")
+
 # Valor por defecto de notificar
 DEFAULT_NOTIFY = True
 SEPARATOR = ";"
@@ -1367,15 +1371,15 @@ class MailManager:
         self.authenticate()
 
     def authenticate(self):
-        if os.path.exists('token.json'):
-            self.credentials = Credentials.from_authorized_user_file('token.json', self.SCOPES)
+        if os.path.exists(TOKEN_EMAIL_PATH):
+            self.credentials = Credentials.from_authorized_user_file(TOKEN_EMAIL_PATH, self.SCOPES)
         if not self.credentials or not self.credentials.valid:
             if self.credentials and self.credentials.expired and self.credentials.refresh_token:
                 self.credentials.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', self.SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, self.SCOPES)
                 self.credentials = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
+            with open(TOKEN_EMAIL_PATH, 'w') as token:
                 token.write(self.credentials.to_json())
 
         self.service = build('gmail', 'v1', credentials=self.credentials)
